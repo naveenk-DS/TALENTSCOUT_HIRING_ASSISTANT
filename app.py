@@ -70,9 +70,10 @@ Tech stack:
 
     result = response.json()
 
-    if isinstance(result, list):
+    if isinstance(result, list) and len(result) > 0:
         return result[0].get("generated_text", "")
-    return "Unable to generate questions at this time."
+    else:
+        return "Unable to generate technical questions at this time."
 
 
 def bot_reply(user_input):
