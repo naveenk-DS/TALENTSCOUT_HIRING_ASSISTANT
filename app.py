@@ -1,7 +1,6 @@
 import streamlit as st
-import openai
+import google.generativeai as genai
 import os
-
 # =============================
 # PAGE CONFIG
 # =============================
@@ -17,7 +16,7 @@ st.caption("AI-powered initial screening chatbot")
 # =============================
 # OPENAI CONFIG
 # =============================
-openai.api_key = os.getenv("OPENAI_API_KEY")
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # =============================
 # SESSION STATE
@@ -49,6 +48,8 @@ def is_exit(text):
     return text.lower().strip() in exit_words
 
 def generate_technical_questions(tech_stack):
+    model = genai.GenerativeModel("gemini-pro")
+
     prompt = f"""
 You are a technical interviewer.
 
@@ -59,12 +60,9 @@ Generate 3–5 interview questions per technology.
 Questions should assess practical and real-world knowledge.
 Group questions clearly by technology.
 """
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",   # or gpt-3.5-turbo
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.6
-    )
-    return response.choices[0].message.content
+
+    response = model.generate_content(prompt)
+    return response.text
 
 def bot_reply(user_input):
     if is_exit(user_input):
