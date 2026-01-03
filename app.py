@@ -48,7 +48,7 @@ def is_exit(text):
     return text.lower().strip() in exit_words
 
 def generate_technical_questions(tech_stack):
-    model = genai.GenerativeModel("gemini-pro")
+    model = genai.GenerativeModel("models/gemini-1.5-flash")
 
     prompt = f"""
 You are a technical interviewer.
