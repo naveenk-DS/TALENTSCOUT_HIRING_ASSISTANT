@@ -1,5 +1,5 @@
 import streamlit as st
-import google.generativeai as genai
+import requests
 import os
 # =============================
 # PAGE CONFIG
@@ -14,9 +14,9 @@ st.title("🤖 TalentScout Hiring Assistant")
 st.caption("AI-powered initial screening chatbot")
 
 # =============================
-# OPENAI CONFIG
-# =============================
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# # OPENAI CONFIG
+# # =============================
+# genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # =============================
 # SESSION STATE
@@ -48,21 +48,32 @@ def is_exit(text):
     return text.lower().strip() in exit_words
 
 def generate_technical_questions(tech_stack):
-    model = genai.GenerativeModel("gemini-1.0-pro")
+    API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-large"
+    headers = {
+        "Authorization": f"Bearer {os.getenv('HF_API_KEY')}"
+    }
 
     prompt = f"""
-You are a technical interviewer.
+Generate 3–5 technical interview questions for each technology in the following tech stack.
+Assess practical and real-world knowledge.
 
-Candidate tech stack:
+Tech stack:
 {tech_stack}
-
-Generate 3–5 interview questions per technology.
-Questions should assess practical and real-world knowledge.
-Group questions clearly by technology.
 """
 
-    response = model.generate_content(prompt)
-    return response.text
+    response = requests.post(
+        API_URL,
+        headers=headers,
+        json={"inputs": prompt},
+        timeout=60
+    )
+
+    result = response.json()
+
+    if isinstance(result, list):
+        return result[0].get("generated_text", "")
+    return "Unable to generate questions at this time."
+
 
 def bot_reply(user_input):
     if is_exit(user_input):
