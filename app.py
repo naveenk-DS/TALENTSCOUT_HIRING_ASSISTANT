@@ -29,6 +29,15 @@ st.caption("AI-powered initial screening chatbot")
 #     st.session_state.messages = []
 
 
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+if "step" not in st.session_state:
+    st.session_state.step = 0
+
+if "user_data" not in st.session_state:
+    st.session_state.user_data = {}
+
 # =============================
 # QUESTIONS FLOW
 # =============================
