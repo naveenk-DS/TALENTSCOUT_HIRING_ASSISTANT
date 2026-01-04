@@ -23,10 +23,11 @@ st.caption("AI-powered initial screening chatbot")
 # =============================
 # SESSION STATE
 # =============================
-if "step" not in st.session_state:
-    st.session_state.step = 0
-    st.session_state.data = {}
-    st.session_state.messages = []
+# if "step" not in st.session_state:
+#     st.session_state.step = 0
+#     st.session_state.data = {}
+#     st.session_state.messages = []
+
 
 # =============================
 # QUESTIONS FLOW
@@ -40,6 +41,18 @@ questions = [
     "What is your current location?",
     "Please list your tech stack (languages, frameworks, databases, tools)."
 ]
+
+fields = [
+    "name",
+    "email",
+    "phone",
+    "experience",
+    "position",
+    "location",
+    "tech_stack"
+]
+
+
 
 exit_words = ["exit", "quit", "bye", "goodbye"]
 
@@ -86,50 +99,45 @@ def generate_technical_questions(tech_stack):
 # use only primary 
 
 
-fields = [
-    "name",
-    "email",
-    "phone",
-    "experience",
-    "position",
-    "location",
-    "tech_stack"
-]
-
-
 def is_valid_email(email):
     pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
     return re.match(pattern, email)
-
 
 def is_valid_phone(phone):
     return phone.isdigit() and 10 <= len(phone) <= 13
 
 
-
 def bot_reply(user_input):
-    global step, user_data
+    step = st.session_state.step
+    user_data = st.session_state.user_data
 
-    # EMAIL STEP (PRIMARY)
+    # EMAIL (PRIMARY)
     if step == 1:
         if not is_valid_email(user_input):
-            return "❌ Please enter a valid email address (example: name@gmail.com)."
+            return "❌ Please enter a valid email address."
         user_data["email"] = user_input
-        step += 1
-        return questions[step]
+        st.session_state.step += 1
+        return questions[st.session_state.step]
 
-    # PHONE STEP (PRIMARY)
+    # PHONE (PRIMARY)
     if step == 2:
         if not is_valid_phone(user_input):
             return "❌ Please enter a valid phone number (digits only)."
         user_data["phone"] = user_input
-        step += 1
-        return questions[step]
+        st.session_state.step += 1
+        return questions[st.session_state.step]
 
     # NORMAL FLOW
     user_data[fields[step]] = user_input
-    step += 1
-    return questions[step] if step < len(questions) else "Processing..."
+    st.session_state.step += 1
+
+    if st.session_state.step < len(questions):
+        return questions[st.session_state.step]
+
+    # TECH STACK → GENERATE QUESTIONS
+    tech_stack = user_data["tech_stack"]
+    technical_questions = generate_technical_questions(tech_stack)
+    return f"Here are your technical interview questions:\n\n{technical_questions}"
 
 # =============================
 # INITIAL MESSAGE
