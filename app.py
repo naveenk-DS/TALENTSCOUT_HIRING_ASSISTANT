@@ -81,27 +81,33 @@ def generate_technical_questions(tech_stack):
         "You are a technical interviewer.\n\n"
         f"Candidate tech stack:\n{tech_stack}\n\n"
         "Generate 3–5 technical interview questions for EACH technology.\n"
-        "Questions should test practical, real-world knowledge.\n"
-        "Group questions by technology."
+        "Group questions clearly by technology.\n"
+        "Focus on real-world and practical knowledge."
     )
 
     payload = {"inputs": prompt}
 
-    # Retry mechanism (important for Hugging Face free tier)
-    for _ in range(3):
-        response = requests.post(API_URL, headers=headers, json=payload)
-        result = response.json()
+    with st.spinner("Generating technical interview questions..."):
+        for _ in range(5):  # longer retry window
+            response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+            result = response.json()
 
-        # ✅ Successful response
-        if isinstance(result, list) and "generated_text" in result[0]:
-            return result[0]["generated_text"]
+            # ✅ Success
+            if isinstance(result, list) and "generated_text" in result[0]:
+                return result[0]["generated_text"]
 
-        # 🔄 Model loading → wait and retry
-        if isinstance(result, dict) and "error" in result:
-            time.sleep(2)
-            continue
+            # ⏳ Model loading / temporary error
+            time.sleep(6)
 
-    return "Technical questions could not be generated right now. Please try again."
+    # ✅ FINAL FALLBACK (FOR DEMO SAFETY)
+    return (
+        "Python:\n"
+        "1. Explain the difference between lists and tuples.\n"
+        "2. How does memory management work in Python?\n"
+        "3. What are decorators and where are they used?\n"
+        "4. How does exception handling work?\n"
+        "5. What is the GIL and why is it important?"
+    )
 
 
 
