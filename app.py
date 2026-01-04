@@ -1,6 +1,8 @@
 import streamlit as st
 import requests
 import os
+import re
+import time
 # =============================
 # PAGE CONFIG
 # =============================
@@ -53,52 +55,81 @@ def generate_technical_questions(tech_stack):
         "Authorization": f"Bearer {os.getenv('HF_API_KEY')}"
     }
 
-    prompt = f"""
-Generate 3–5 technical interview questions for each technology in the following tech stack.
-Assess practical and real-world knowledge.
-
-Tech stack:
-{tech_stack}
-"""
-
-    response = requests.post(
-        API_URL,
-        headers=headers,
-        json={"inputs": prompt},
-        timeout=60
+    prompt = (
+        "You are a technical interviewer.\n\n"
+        f"Candidate tech stack:\n{tech_stack}\n\n"
+        "Generate 3–5 technical interview questions for EACH technology.\n"
+        "Questions should test practical, real-world knowledge.\n"
+        "Group questions by technology."
     )
 
-    result = response.json()
+    payload = {"inputs": prompt}
 
-    if isinstance(result, list) and len(result) > 0:
-        return result[0].get("generated_text", "")
-    else:
-        return "Unable to generate technical questions at this time."
+    # Retry mechanism (important for Hugging Face free tier)
+    for _ in range(3):
+        response = requests.post(API_URL, headers=headers, json=payload)
+        result = response.json()
+
+        # ✅ Successful response
+        if isinstance(result, list) and "generated_text" in result[0]:
+            return result[0]["generated_text"]
+
+        # 🔄 Model loading → wait and retry
+        if isinstance(result, dict) and "error" in result:
+            time.sleep(2)
+            continue
+
+    return "Technical questions could not be generated right now. Please try again."
+
+
+
+# use only primary 
+
+
+fields = [
+    "name",
+    "email",
+    "phone",
+    "experience",
+    "position",
+    "location",
+    "tech_stack"
+]
+
+
+def is_valid_email(email):
+    pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+    return re.match(pattern, email)
+
+
+def is_valid_phone(phone):
+    return phone.isdigit() and 10 <= len(phone) <= 13
+
 
 
 def bot_reply(user_input):
-    if is_exit(user_input):
-        return "Thank you for your time! 👋 Our recruitment team will contact you soon."
+    global step, user_data
 
-    step = st.session_state.step
+    # EMAIL STEP (PRIMARY)
+    if step == 1:
+        if not is_valid_email(user_input):
+            return "❌ Please enter a valid email address (example: name@gmail.com)."
+        user_data["email"] = user_input
+        step += 1
+        return questions[step]
 
-    if step < len(questions):
-        st.session_state.data[questions[step]] = user_input
-        st.session_state.step += 1
+    # PHONE STEP (PRIMARY)
+    if step == 2:
+        if not is_valid_phone(user_input):
+            return "❌ Please enter a valid phone number (digits only)."
+        user_data["phone"] = user_input
+        step += 1
+        return questions[step]
 
-        if st.session_state.step < len(questions):
-            return questions[st.session_state.step]
-        else:
-            tech_stack = st.session_state.data[questions[-1]]
-            tech_questions = generate_technical_questions(tech_stack)
-            st.session_state.step += 1
-            return (
-                "✅ Thank you for providing your details.\n\n"
-                "Here are your technical interview questions:\n\n"
-                f"{tech_questions}"
-            )
-
-    return "Thank you! We will review your profile and get back to you."
+    # NORMAL FLOW
+    user_data[fields[step]] = user_input
+    step += 1
+    return questions[step] if step < len(questions) else "Processing..."
 
 # =============================
 # INITIAL MESSAGE
